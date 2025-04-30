@@ -1,3 +1,4 @@
+import re
 from flask import Flask, render_template, request, send_file
 import docx
 import uuid
@@ -48,7 +49,7 @@ def parse_docx(file_bytes):
                          .replace(">", "&gt;")
                          .replace('"', "&quot;"))
         
-        if text.startswith("Q"):
+        if re.match(r"^Q\d+", text):
             q_count += 1
             content_html += f"<span style='color:blue; font-weight:bold;'>{escaped_text}</span><br><br>"
         elif text.startswith(("a.", "b.", "c.", "d.")):
