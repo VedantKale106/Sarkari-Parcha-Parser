@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarkari Parcha Parser</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eefbf3',
+                            100: '#d5f5e0',
+                            200: '#ace9c5',
+                            300: '#75d69a',
+                            400: '#4ac07c',
+                            500: '#2c9f5e',
+                            600: '#1e824d',
+                            700: '#1b6940',
+                            800: '#195236',
+                            900: '#18442e'
+                        }
+                    },
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #cbd5e0;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #4ac07c;
+            background-color: rgba(74, 192, 124, 0.05);
+        }
+        
+        .input-file {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .file-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        
+        /* Gradient background for header */
+        .header-gradient {
+            background: linear-gradient(135deg, #1e824d 0%, #4ac07c 100%);
+        }
+        
+        /* Custom scrollbar for content area */
+        #extracted-content::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        #extracted-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        #extracted-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        #extracted-content::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Animation for status indicators */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .status-indicator {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Custom file input button styling */
+        .custom-file-button {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background-color: #4ac07c;
+            color: white;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .custom-file-button:hover {
+            background-color: #1e824d;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800">
+    <!-- Header with logo/title -->
+    <header class="header-gradient text-white py-6 mb-8 shadow-md">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold">Sarkari Parcha Parser</h1>
+            <p class="mt-2 text-white/80">Upload and validate your document structure</p>
+        </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="container mx-auto px-4 pb-12">
+        <div class="max-w-3xl mx-auto">
+            <!-- Upload Form -->
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">Upload Document</h2>
+                
+                <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                    <!-- File upload with drag & drop -->
+                    <div class="space-y-2">
+                        <label for="file" class="block text-gray-700 font-medium">Select .docx File:</label>
+                        <div class="drop-zone relative h-36 rounded-lg bg-gray-50">
+                            <input type="file" name="file" id="file" required accept=".docx" 
+                                class="input-file"
+                                onchange="handleFileChange(this)"
+                                ondragover="handleDragOver(event)"
+                                ondragleave="handleDragLeave(event)"
+                                ondrop="handleDrop(event, this)">
+                                
+                            <div class="file-label">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v10a2 2 0 01-2 2z" />
+                                </svg>
+                                <span class="text-gray-500 text-sm font-medium" id="file-name-display">Drag file here or click to browse</span>
+                                <span class="custom-file-button mt-3">Choose File</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expected questions input -->
+                    <div class="space-y-2">
+                        <label for="expected_questions" class="block text-gray-700 font-medium">Expected Questions:</label>
+                        <div class="relative">
+                            <input type="number" name="expected_questions" id="expected_questions" required 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-300 focus:border-primary-500 transition-all outline-none"
+                                   value="25" min="1">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit button -->
+                    <button type="submit" 
+                            class="w-full py-3 px-6 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg shadow transition-all focus:outline-none focus:ring-2 focus:ring-primary-300 focus:ring-offset-2">
+                        Upload & Validate Document
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Section (conditionally shown) -->
+            {% if data %}
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 animate-fade-in">
+                <!-- Results header -->
+                <div class="border-b border-gray-200 pb-5 mb-6">
+                    <h2 class="text-xl font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Document Analysis
+                    </h2>
+                    <p class="text-gray-500 mt-1">{{ data.filename }}</p>
+                </div>
+                
+                <!-- Results stats -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <div class="text-sm text-gray-500 mb-1">Expected Questions</div>
+                        <div class="text-xl font-semibold">{{ data.expected }}</div>
+                    </div>
+                    
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <div class="text-sm text-gray-500 mb-1">Questions Found</div>
+                        <div class="text-xl font-semibold flex items-center gap-2">
+                            {{ data.questions }}
+                            <span class="text-sm font-normal {{ 'text-green-500' if data.status.questions == '✅' else 'text-red-500' }}">
+                                {{ data.status.questions }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <div class="text-sm text-gray-500 mb-1">Options Found</div>
+                        <div class="text-xl font-semibold flex items-center gap-2">
+                            {{ data.options }}
+                            <span class="text-sm font-normal {{ 'text-green-500' if data.status.options == '✅' else 'text-red-500' }}">
+                                {{ data.status.options }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <div class="text-sm text-gray-500 mb-1">Answers Found</div>
+                        <div class="text-xl font-semibold flex items-center gap-2">
+                            {{ data.answers }}
+                            <span class="text-sm font-normal {{ 'text-green-500' if data.status.answers == '✅' else 'text-red-500' }}">
+                                {{ data.status.answers }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-gray-50 rounded-lg md:col-span-2">
+                        <div class="text-sm text-gray-500 mb-1">Solutions Found</div>
+                        <div class="text-xl font-semibold flex items-center gap-2">
+                            {{ data.solutions }}
+                            <span class="text-sm font-normal {{ 'text-green-500' if data.status.solutions == '✅' else 'text-red-500' }}">
+                                {{ data.status.solutions }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Content preview - now larger -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Document Content Preview
+                    </h3>
+                    <div id="extracted-content" class="bg-gray-50 border border-gray-200 rounded-lg p-4 h-[500px] md:h-[600px] lg:h-[700px] overflow-auto">
+                        {{ data.content | safe }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="mt-auto py-6 bg-gray-800 text-white/80">
+        <div class="container mx-auto px-4 text-center text-sm">
+            <p>© 2025 Sarkari Parcha Parser - A tool for document validation</p>
+        </div>
+    </footer>
+
+    <script>
+        // Improved JavaScript for handling drag and drop
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function handleDrop(event, inputElement) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+
+            const files = event.dataTransfer.files;
+            if (files && files.length > 0) {
+                inputElement.files = files;
+                updateFileName(files[0].name);
+                
+                // Trigger change event
+                const changeEvent = new Event('change', {
+                    bubbles: true,
+                    cancelable: true,
+                });
+                inputElement.dispatchEvent(changeEvent);
+            }
+        }
+
+        function handleFileChange(inputElement) {
+            if (inputElement.files && inputElement.files.length > 0) {
+                const fileName = inputElement.files[0].name;
+                updateFileName(fileName);
+            }
+        }
+        
+        function updateFileName(name) {
+            const fileDisplay = document.getElementById('file-name-display');
+            if (fileDisplay) {
+                fileDisplay.textContent = name;
+                fileDisplay.classList.add('text-primary-600', 'font-semibold');
+            }
+        }
+        
+        // Add animation to results section if present
+        document.addEventListener('DOMContentLoaded', function() {
+            const resultsSection = document.querySelector('.animate-fade-in');
+            if (resultsSection) {
+                resultsSection.style.animation = 'fadeIn 0.5s ease-in-out';
+            }
+        });
+    </script>
+</body>
+</html>
