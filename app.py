@@ -226,6 +226,62 @@ def download_file(file_id):
             return "Error downloading file", 500
     return "File not found", 404
 
+@app.route('/bulk', methods=['GET', 'POST'])
+def bulk_upload():
+    results = []
+    if request.method == 'POST':
+        try:
+            files = request.files.getlist('files')
+            expected_q = int(request.form.get('expected_questions', 0))
+
+            if not files or files[0].filename == '':
+                flash('No files selected.', 'error')
+                return render_template('bulk.html', results=results)
+
+            for file in files:
+                file_result = {'filename': file.filename}
+                try:
+                    if not file.filename.lower().endswith('.docx'):
+                        raise ValueError("Only .docx files allowed")
+
+                    file_bytes = file.read()
+                    html_content, q, o, a, s = parse_docx(file_bytes)
+
+                    file_id = str(uuid.uuid4())
+                    file_store[file_id] = {
+                        'filename': file.filename,
+                        'bytes': file_bytes
+                    }
+
+                    status = {
+                        'questions': '✅' if expected_q > 0 and q == expected_q else f'❌ ({q}/{expected_q})',
+                        'options': '✅' if expected_q > 0 and o == expected_q * 4 else f'❌ ({o}/{expected_q * 4})',
+                        'answers': '✅' if expected_q > 0 and a == expected_q else f'❌ ({a}/{expected_q})',
+                        'solutions': '✅' if expected_q > 0 and s == expected_q else f'❌ ({s}/{expected_q})',
+                    }
+
+                    file_result.update({
+                        'status': status,
+                        'questions': q,
+                        'options': o,
+                        'answers': a,
+                        'solutions': s,
+                        'expected': expected_q,
+                        'content': html_content,
+                        'file_id': file_id
+                    })
+
+                except Exception as e:
+                    file_result['error'] = str(e)
+                    logger.error(f"Error processing file {file.filename}: {str(e)}")
+
+                results.append(file_result)
+
+        except Exception as e:
+            flash(f"Unexpected error: {str(e)}", 'error')
+            logger.error(f"Bulk upload error: {str(e)}")
+
+    return render_template('bulk.html', results=results)
 
 
 if __name__ == '__main__':
