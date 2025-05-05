@@ -120,6 +120,16 @@
         .custom-file-button:hover {
             background-color: #1e824d;
         }
+        
+        /* Flash message animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .flash-message {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
     </style>
 </head>
 <body class="font-sans text-gray-800">
@@ -134,6 +144,30 @@
     <!-- Main content -->
     <main class="container mx-auto px-4 pb-12">
         <div class="max-w-3xl mx-auto">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6">
+                        {% for category, message in messages %}
+                            <div class="flash-message p-4 rounded-lg mb-3 {% if category == 'error' %}bg-red-100 text-red-700 border border-red-200{% else %}bg-green-100 text-green-700 border border-green-200{% endif %}">
+                                <div class="flex items-center">
+                                    {% if category == 'error' %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    {% else %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    {% endif %}
+                                    {{ message }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+        
             <!-- Upload Form -->
             <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8">
                 <h2 class="text-xl font-semibold text-gray-800 mb-6">Upload Document</h2>
@@ -323,6 +357,17 @@
             const resultsSection = document.querySelector('.animate-fade-in');
             if (resultsSection) {
                 resultsSection.style.animation = 'fadeIn 0.5s ease-in-out';
+            }
+            
+            // Auto-hide flash messages after 5 seconds
+            const flashMessages = document.querySelectorAll('.flash-message');
+            if (flashMessages.length > 0) {
+                setTimeout(function() {
+                    flashMessages.forEach(function(message) {
+                        message.style.opacity = '0';
+                        message.style.transition = 'opacity 0.5s ease';
+                    });
+                }, 5000);
             }
         });
     </script>
